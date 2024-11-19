@@ -36,5 +36,38 @@ func (c *Context) Json(data map[string]interface{}) map[string]interface{} {
 	return data
 }
 
+func RegisterGetRoute(engine *gin.Engine, handler interface{}) {
+	// 获取函数类型
+	handlerType := reflect.TypeOf(handler)
+	if handlerType.Kind() != reflect.Func {
+		return
+	}
+
+	handlerValue := reflect.ValueOf(handler)
+	// 获取函数名作为路径
+	funcName := runtime.FuncForPC(handlerValue.Pointer()).Name()
+	// 提取最后一个/后的函数名
+	if idx := strings.LastIndex(funcName, "/"); idx >= 0 {
+		funcName = funcName[idx+1:]
+	}
+
+	// 检查返回值数量
+	if handlerType.NumOut() == 0 {
+		// 第一种情况:无返回值,直接使用函数名作为路径
+		Get(engine, "/"+funcName, func(c *Context) {
+			handlerValue.Call([]reflect.Value{reflect.ValueOf(c)})
+		})
+	} else if handlerType.NumOut() == 2 {
+		// 第二种情况:有返回值,执行函数获取路径和处理函数
+		results := handlerValue.Call(nil)
+		if len(results) == 2 {
+			path, ok1 := results[0].Interface().(string)
+			handler, ok2 := results[1].Interface().(func(*Context))
+			if ok1 && ok2 {
+				Get(engine, path, handler)
+			}
+		}
+	}
+}
 
 

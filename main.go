@@ -18,8 +18,6 @@ func pingHandler(c *kik.Context) {
 	c.JsonResult(200, kik.H{"message": "pong","name":c.GetQuery("name")})
 }
 
-
-
 func bootstrap(){
 	kik.Get(router,"/ping",ping$Handler)
 	router.Run()
